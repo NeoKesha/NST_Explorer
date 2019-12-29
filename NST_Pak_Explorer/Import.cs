@@ -16,9 +16,18 @@ namespace NST_Pak_Explorer {
         IGA iga;
         List<File> files1;
         List<File> files2 = new List<File>();
+        private EndiannessAwareBinaryReader.Endianness endianness;
         private void Import_Load(object sender, EventArgs e) {
             if (openFileDialog1.ShowDialog() == DialogResult.OK) {
-                iga = new IGA(openFileDialog1.FileName);
+                if (radioButton1.Checked)
+                {
+                    endianness = EndiannessAwareBinaryReader.Endianness.Little;
+                }
+                else if (radioButton2.Checked)
+                {
+                    endianness = EndiannessAwareBinaryReader.Endianness.Big;
+                }
+                iga = new IGA(openFileDialog1.FileName, endianness);
                 files1 = iga.file;
                 buildTree(treeView1, files1);
                 buildTree(treeView2, files2);

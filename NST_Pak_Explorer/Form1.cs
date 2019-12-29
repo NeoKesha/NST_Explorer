@@ -14,6 +14,8 @@ namespace NST_Pak_Explorer {
             InitializeComponent();
         }
         public IGA iga;
+        private EndiannessAwareBinaryReader.Endianness endianness;
+
         private void buildTree(bool no_lzma) {
             if (iga == null) return;
             treeView1.BeginUpdate();
@@ -78,7 +80,15 @@ namespace NST_Pak_Explorer {
 
         private void button4_Click(object sender, EventArgs e) {
             if (openFileDialog1.ShowDialog() == DialogResult.OK) {
-                iga = new IGA(openFileDialog1.FileName);
+                if (radioButton1.Checked)
+                {
+                    endianness = EndiannessAwareBinaryReader.Endianness.Little;
+                }
+                else if (radioButton2.Checked)
+                {
+                    endianness = EndiannessAwareBinaryReader.Endianness.Big;
+                }
+                iga = new IGA(openFileDialog1.FileName, endianness);
                 buildTree(false);
             }
         }
@@ -180,7 +190,7 @@ namespace NST_Pak_Explorer {
                                     return;
                                 }
                                 open = CMD[1];
-                                iga = new IGA(NST_Folder + CMD[1]);
+                                iga = new IGA(NST_Folder + CMD[1], endianness);
                                 break;
                             case "repack": // repack
                                 iga.repack(NST_Folder + open + "tmp",progressBar1);
@@ -226,7 +236,7 @@ namespace NST_Pak_Explorer {
                                             reader.Close();
                                             return;
                                         }
-                                        tmp_pak = new IGA(NST_Folder + CMD[2]);
+                                        tmp_pak = new IGA(NST_Folder + CMD[2], endianness);
                                         index = -1;
                                         try {
                                             ID = UInt32.Parse(CMD[3]);
@@ -281,7 +291,7 @@ namespace NST_Pak_Explorer {
                                     reader.Close();
                                     return;
                                 }
-                                import = new IGA(NST_Folder + CMD[1]);
+                                import = new IGA(NST_Folder + CMD[1], endianness);
                                 break;
                             case "import":
                                 if (CMD.Length < 2) {

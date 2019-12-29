@@ -24,9 +24,9 @@ namespace NST_Pak_Explorer {
         public List<File> file = new List<File>();
         public List<UInt16> mc_table = new List<ushort>();
         public List<UInt16> sc_table = new List<ushort>();
-        public IGA(String path) {
+        public IGA(String path, EndiannessAwareBinaryReader.Endianness endianness) {
             FileStream iga_file = new FileStream(path, FileMode.Open, FileAccess.Read);
-            BinaryReader reader = new BinaryReader(iga_file);
+            EndiannessAwareBinaryReader reader = new EndiannessAwareBinaryReader(iga_file, endianness);
             signature = reader.ReadInt32();
             version = reader.ReadInt32();
             info_size = reader.ReadInt32();
@@ -280,7 +280,7 @@ namespace NST_Pak_Explorer {
             }
             return true;
         }
-        private String readString(BinaryReader reader) {
+        private String readString(EndiannessAwareBinaryReader reader) {
             String str = "";
             Char ch = '\0';
             do {
