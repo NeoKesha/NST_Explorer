@@ -68,7 +68,7 @@ namespace NST_Pak_Explorer
 
         public ulong ReadUInt64(Endianness endianness) => BitConverter.ToUInt64(ReadForEndianness(sizeof(ulong), endianness), 0);
 
-        private byte[] ReadForEndianness(int bytesToRead, Endianness endianness)
+        public byte[] ReadForEndianness(int bytesToRead, Endianness endianness)
         {
             var bytesRead = ReadBytes(bytesToRead);
             switch (endianness)

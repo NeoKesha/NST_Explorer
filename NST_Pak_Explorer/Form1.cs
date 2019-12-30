@@ -104,7 +104,7 @@ namespace NST_Pak_Explorer {
 
         private void button3_Click(object sender, EventArgs e) {
             if (saveFileDialog1.ShowDialog() == DialogResult.OK) {
-                iga.repack(saveFileDialog1.FileName, progressBar1);
+                iga.repack(saveFileDialog1.FileName, progressBar1, endianness);
             }
         }
 
@@ -122,7 +122,7 @@ namespace NST_Pak_Explorer {
                 File f = iga.file[index];
                 saveFileDialog2.FileName = f.getRelName().Replace('\\', '/').Split('/').Last();
                 if (saveFileDialog2.ShowDialog() == DialogResult.OK) {
-                    iga.extract(index, saveFileDialog2.FileName);
+                    iga.extract(index, saveFileDialog2.FileName, endianness);
                 }
             }
         }
@@ -136,7 +136,7 @@ namespace NST_Pak_Explorer {
             } else {
                 int index = (int)node.Tag;
                 File f = iga.file[index];
-                iga.extract(index, base_path + "\\" + f.getRelName().Replace('\\', '/').Split('/').Last());
+                iga.extract(index, base_path + "\\" + f.getRelName().Replace('\\', '/').Split('/').Last(), endianness);
             }
         }
         private void Form1_Load(object sender, EventArgs e) {
@@ -193,7 +193,7 @@ namespace NST_Pak_Explorer {
                                 iga = new IGA(NST_Folder + CMD[1], endianness);
                                 break;
                             case "repack": // repack
-                                iga.repack(NST_Folder + open + "tmp",progressBar1);
+                                iga.repack(NST_Folder + open + "tmp",progressBar1, endianness);
                                 if (!System.IO.File.Exists(NST_Folder + open + ".patch_bak"))
                                     System.IO.File.Move(NST_Folder + open, NST_Folder + open + ".patch_bak");
                                 else
