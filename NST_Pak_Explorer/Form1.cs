@@ -25,9 +25,26 @@ namespace NST_Pak_Explorer {
             for (int i = 0; i < iga.file.Count; ++i) {
                 File f = iga.file[i];
                 TreeNode parent = treeView1.Nodes[0];
-                TreeNode node = new TreeNode(f.getFullName().Split('/').Last());
+                TreeNode node;
+                if (iga.version == 10)
+                {
+                    node = new TreeNode(f.getFullName().Split('\\').Last());
+                }
+                else
+                {
+                    node = new TreeNode(f.getFullName().Split('/').Last());
+                }
+
                 node.Tag = i;
-                String[] path = f.getFullName().Split('/');
+                String[] path;
+                if (iga.version == 10)
+                {
+                    path = f.getFullName().Split('\\');
+                }
+                else
+                {
+                    path = f.getFullName().Split('/');
+                }
                 for (int j = 0; j < path.Length - 1; ++j) {
                     TreeNode[] res = parent.Nodes.Find(path[j], false);
                     if (res.Length == 0) {

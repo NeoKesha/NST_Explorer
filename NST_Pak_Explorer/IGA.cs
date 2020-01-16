@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Threading.Tasks;
+using System.IO.Compression;
 
 namespace NST_Pak_Explorer {
     public class IGA {
         private Int32 signature;
-        private Int32 version;
+        public Int32 version;
         private Int32 info_size;
         private Int32 files_count;
         private Int32 chunk_size;
@@ -37,18 +38,17 @@ namespace NST_Pak_Explorer {
             zero1 = reader.ReadInt32();
             table1_size = reader.ReadInt32();
             table2_size = reader.ReadInt32();
-            if (version == 11) //Skylanders SuperChargers WiiU Big Endian
+            if (version == 11 || version == 10) //Skylanders SuperChargers WiiU Big Endian
             {
                 zero2 = reader.ReadInt32();
                 names_offset = reader.ReadUInt32();
-                names_size = reader.ReadInt32();
             }
             else
             {
                 names_offset = reader.ReadUInt32();
                 zero2 = reader.ReadInt32();
-                names_size = reader.ReadInt32();
             }
+            names_size = reader.ReadInt32();
             one = reader.ReadInt32();
             for (int i = 0; i < files_count; ++i) {
                 file.Add(new File());
@@ -56,22 +56,19 @@ namespace NST_Pak_Explorer {
                 file[i].setSource(path);
             }
             for (int i = 0; i < files_count; ++i) {
-                if (version == 11)
+                if (version == 11 || version == 10)
                 {
                     file[i].setOrdinal(reader.ReadInt32());
                     file[i].setOffset(reader.ReadUInt32());
-                    file[i].setSize(reader.ReadInt32());
-                    file[i].setCompression(reader.ReadInt32());
-                    file[i].setSourceOffset(file[i].getOffset());
                 }
                 else
                 {
                     file[i].setOffset(reader.ReadUInt32());
                     file[i].setOrdinal(reader.ReadInt32());
-                    file[i].setSize(reader.ReadInt32());
-                    file[i].setCompression(reader.ReadInt32());
-                    file[i].setSourceOffset(file[i].getOffset());
                 }
+                file[i].setSize(reader.ReadInt32());
+                file[i].setCompression(reader.ReadInt32());
+                file[i].setSourceOffset(file[i].getOffset());
             }
             for (int i = 0; i < table1_size; ++i) {
                 mc_table.Add(reader.ReadUInt16());
@@ -89,11 +86,21 @@ namespace NST_Pak_Explorer {
             }
             for (int i = 0; i < files_count; ++i) {
                 reader.BaseStream.Position = names_offset + name_offsets[i];
-                String full_name = ""; String rel_name = "";
-                full_name = readString(reader);
-                rel_name = readString(reader);
-                file[i].setFullName(full_name);
-                file[i].setRelName(rel_name);
+                if (version == 10)
+                {
+                    String rel_name = "";
+                    rel_name = readString(reader);
+                    file[i].setFullName(rel_name);
+                    file[i].setRelName(rel_name);
+                }
+                else
+                {
+                    String full_name = ""; String rel_name = "";
+                    full_name = readString(reader);
+                    rel_name = readString(reader);
+                    file[i].setFullName(full_name);
+                    file[i].setRelName(rel_name);
+                }
             }
             reader.Close();
         }
@@ -228,69 +235,31 @@ namespace NST_Pak_Explorer {
             bool accurate = true;
             SevenZip.Compression.LZMA.Decoder coder = new SevenZip.Compression.LZMA.Decoder();
             Int64 begin = writer.BaseStream.Position;
+            Int32 shift_back = version == 12 ? 7 : 9;
+            Int32 uncompressed_size = version == 12 ? 0x100000 : 0x8000;
+            Int32 properties_value = version == 12 ? 171 : 93;
             while (writer.BaseStream.Position - begin < size) {
                 Int32 chunk_size = 0;
-                Int32 shift_back = 7;
-                if (version == 11)
+                if (!accurate)
                 {
-                    chunk_size = reader.ReadInt16();
-                }
-                else if (version == 12)
-                {
-                    if (!accurate)
-                    {
-                        chunk_size = reader.ReadInt32();
-                    }
-                    else
-                    {
-                        chunk_size = (Int32)round((UInt32)reader.ReadInt32()) - 7;
-                    }
-                    shift_back = 7;
-                }
-                else if (version > 12)
-                {
-                    if (!accurate)
-                    {
-                        chunk_size = reader.ReadInt32();
-                    }
-                    else
-                    {
-                        chunk_size = (Int32)round((UInt32)reader.ReadInt32()) - 9;
-                    }
-                    shift_back = 9;
-                }
-                
-                byte[] properties = reader.ReadBytes(5);
-                if (version == 12)
-                {
-                    if (properties[0] != 171 || BitConverter.ToInt32(properties, 1) != 0x100000)
-                    {
-                        reader.BaseStream.Position -= shift_back;
-                        writer.Write(reader.ReadBytes(0x100000));
-                    }
-                    else
-                    {
-                        coder.SetDecoderProperties(properties);
-                        coder.Code(reader.BaseStream, writer.BaseStream, chunk_size, Math.Min(0x100000, size - (writer.BaseStream.Position - begin)), null);
-                        writer.Write(reader.ReadBytes((int)(round((UInt32)reader.BaseStream.Position) - reader.BaseStream.Position)));
-                    }
+                    chunk_size = reader.ReadInt32();
                 }
                 else
                 {
-                    if (properties[0] != 93 || BitConverter.ToInt32(properties, 1) != 0x8000)
-                    {
-                        reader.BaseStream.Position -= shift_back;
-                        writer.Write(reader.ReadBytes(0x8000));
-                    }
-                    else
-                    {
-                        coder.SetDecoderProperties(properties);
-                        coder.Code(reader.BaseStream, writer.BaseStream, chunk_size, Math.Min(0x8000, size - (writer.BaseStream.Position - begin)), null);
-                        writer.Write(reader.ReadBytes((int)(round((UInt32)reader.BaseStream.Position) - reader.BaseStream.Position)));
-                    }
+                    chunk_size = (Int32)round((UInt32)reader.ReadInt32()) - shift_back;
                 }
-                
-
+                byte[] properties = reader.ReadBytes(5);
+                if (properties[0] != properties_value || BitConverter.ToInt32(properties, 1) != uncompressed_size)
+                {
+                    reader.BaseStream.Position -= shift_back;
+                    writer.Write(reader.ReadBytes(uncompressed_size));
+                }
+                else
+                {
+                    coder.SetDecoderProperties(properties);
+                    coder.Code(reader.BaseStream, writer.BaseStream, chunk_size, Math.Min(uncompressed_size, size - (writer.BaseStream.Position - begin)), null);
+                    writer.Write(reader.ReadBytes((int)(round((UInt32)reader.BaseStream.Position) - reader.BaseStream.Position)));
+                }
             }
         }
         public void extract(Int32 index, String path, EndiannessAwareBinaryReader.Endianness endianness) {
