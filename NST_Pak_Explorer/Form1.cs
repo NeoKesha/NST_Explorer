@@ -14,6 +14,8 @@ namespace NST_Pak_Explorer {
             InitializeComponent();
         }
         public IGA iga;
+        private EndiannessAwareBinaryReader.Endianness endianness;
+
         private void buildTree(bool no_lzma) {
             if (iga == null) return;
             treeView1.BeginUpdate();
@@ -23,9 +25,26 @@ namespace NST_Pak_Explorer {
             for (int i = 0; i < iga.file.Count; ++i) {
                 File f = iga.file[i];
                 TreeNode parent = treeView1.Nodes[0];
-                TreeNode node = new TreeNode(f.getFullName().Split('/').Last());
+                TreeNode node;
+                if (iga.version == 10)
+                {
+                    node = new TreeNode(f.getFullName().Split('\\').Last());
+                }
+                else
+                {
+                    node = new TreeNode(f.getFullName().Split('/').Last());
+                }
+
                 node.Tag = i;
-                String[] path = f.getFullName().Split('/');
+                String[] path;
+                if (iga.version == 10)
+                {
+                    path = f.getFullName().Split('\\');
+                }
+                else
+                {
+                    path = f.getFullName().Split('/');
+                }
                 for (int j = 0; j < path.Length - 1; ++j) {
                     TreeNode[] res = parent.Nodes.Find(path[j], false);
                     if (res.Length == 0) {
@@ -78,7 +97,15 @@ namespace NST_Pak_Explorer {
 
         private void button4_Click(object sender, EventArgs e) {
             if (openFileDialog1.ShowDialog() == DialogResult.OK) {
-                iga = new IGA(openFileDialog1.FileName);
+                if (radioButton1.Checked)
+                {
+                    endianness = EndiannessAwareBinaryReader.Endianness.Little;
+                }
+                else if (radioButton2.Checked)
+                {
+                    endianness = EndiannessAwareBinaryReader.Endianness.Big;
+                }
+                iga = new IGA(openFileDialog1.FileName, endianness);
                 buildTree(false);
             }
         }
@@ -94,7 +121,7 @@ namespace NST_Pak_Explorer {
 
         private void button3_Click(object sender, EventArgs e) {
             if (saveFileDialog1.ShowDialog() == DialogResult.OK) {
-                iga.repack(saveFileDialog1.FileName, progressBar1);
+                iga.repack(saveFileDialog1.FileName, progressBar1, endianness);
             }
         }
 
@@ -112,7 +139,7 @@ namespace NST_Pak_Explorer {
                 File f = iga.file[index];
                 saveFileDialog2.FileName = f.getRelName().Replace('\\', '/').Split('/').Last();
                 if (saveFileDialog2.ShowDialog() == DialogResult.OK) {
-                    iga.extract(index, saveFileDialog2.FileName);
+                    iga.extract(index, saveFileDialog2.FileName, endianness);
                 }
             }
         }
@@ -126,7 +153,7 @@ namespace NST_Pak_Explorer {
             } else {
                 int index = (int)node.Tag;
                 File f = iga.file[index];
-                iga.extract(index, base_path + "\\" + f.getRelName().Replace('\\', '/').Split('/').Last());
+                iga.extract(index, base_path + "\\" + f.getRelName().Replace('\\', '/').Split('/').Last(), endianness);
             }
         }
         private void Form1_Load(object sender, EventArgs e) {
@@ -180,10 +207,10 @@ namespace NST_Pak_Explorer {
                                     return;
                                 }
                                 open = CMD[1];
-                                iga = new IGA(NST_Folder + CMD[1]);
+                                iga = new IGA(NST_Folder + CMD[1], endianness);
                                 break;
                             case "repack": // repack
-                                iga.repack(NST_Folder + open + "tmp",progressBar1);
+                                iga.repack(NST_Folder + open + "tmp",progressBar1, endianness);
                                 if (!System.IO.File.Exists(NST_Folder + open + ".patch_bak"))
                                     System.IO.File.Move(NST_Folder + open, NST_Folder + open + ".patch_bak");
                                 else
@@ -226,7 +253,7 @@ namespace NST_Pak_Explorer {
                                             reader.Close();
                                             return;
                                         }
-                                        tmp_pak = new IGA(NST_Folder + CMD[2]);
+                                        tmp_pak = new IGA(NST_Folder + CMD[2], endianness);
                                         index = -1;
                                         try {
                                             ID = UInt32.Parse(CMD[3]);
@@ -281,7 +308,7 @@ namespace NST_Pak_Explorer {
                                     reader.Close();
                                     return;
                                 }
-                                import = new IGA(NST_Folder + CMD[1]);
+                                import = new IGA(NST_Folder + CMD[1], endianness);
                                 break;
                             case "import":
                                 if (CMD.Length < 2) {
